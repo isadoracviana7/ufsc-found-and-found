@@ -25,8 +25,9 @@ import {
 } from "@/services/api";
 import { useApp } from "./app-context";
 import { ErrorMessage, Field, formatDate, Processing } from "./common";
+
 export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void }) {
-  const { role, refresh, connection } = useApp();
+  const { role, currentUser, refresh, connection } = useApp();
   const [step, setStep] = useState<"detail" | "claim" | "return" | "found">("detail");
   const [secret, setSecret] = useState("");
   const [justification, setJustification] = useState("");
@@ -40,6 +41,7 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
   const [claims, setClaims] = useState<RecordData[]>([]);
   const [claimId, setClaimId] = useState("");
   const [comparison, setComparison] = useState("");
+
   useEffect(() => {
     if (role === "operador") {
       void getSecret(item.id)
@@ -56,6 +58,7 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
         .catch((e) => setError(String(e)));
     }
   }, [role, item.id]);
+
   async function validateRegistration() {
     setError("");
     try {
@@ -67,18 +70,20 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
         setError("Matrícula não encontrada nos membros UFSC cadastrados.");
         return;
       }
-      setName(String(user["nome"]));
+      setName(String(user["name"] ?? user["nome"] ?? ""));
       setValidated(true);
       toast.success("Matrícula conferida. Confirme a propriedade presencialmente.");
     } catch (e) {
       setError(String(e));
     }
   }
+
   async function submitClaim() {
     setError("");
     setBusy(true);
     try {
-      await createClaim(item.id, 1, justification);
+      const activeUserId = currentUser?.id ?? 1;
+      await createClaim(item.id, activeUserId, justification);
       await refresh();
       toast.success("Solicitação enviada ao Protocolo.");
       onClose();
@@ -88,6 +93,7 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
       setBusy(false);
     }
   }
+
   async function complete(approved = true) {
     setError("");
     setBusy(true);
@@ -102,10 +108,11 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
           const claim = await createClaim(item.id, Number(member["id_usuario"]), justification);
           id = Number(claim["id_reivindicacao"]);
         }
+        const operatorName = currentUser?.name ?? "Operador do Protocolo";
         await decideClaim(
           id,
           approved,
-          `Conferência presencial por Lucas Mendes. Dono: ${name}. Matrícula: ${registration}. ${justification}`,
+          `Conferência presencial por ${operatorName}. Dono: ${name}. Matrícula: ${registration}. ${justification}`,
         );
       }
       await refresh();
@@ -123,9 +130,11 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
       setBusy(false);
     }
   }
+
   const canComplete =
     canReturn(name, registration, checked, validated) &&
     (!!claimId || justification.trim().length >= 5);
+
   return (
     <>
       <Dialog
