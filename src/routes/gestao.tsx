@@ -269,4 +269,280 @@ function Admin() {
                     </thead>
                     <tbody>
                       {displayRows.map((r, i) => (
-                        <tr key={String
+                        <tr key={String(r[resource.idKey] ?? i)}>
+                          {columns.map((k) => (
+                            <td key={k} title={String(r[k] ?? "")}>
+                              {String(r[k] ?? "—")}
+                            </td>
+                          ))}
+                          <td>
+                            <div className="table-actions">
+                              {resource.editFields.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Editar registro"
+                                  onClick={() => {
+                                    setIsNew(false);
+                                    setEdit(r);
+                                    setError("");
+                                  }}
+                                >
+                                  <Pencil />
+                                </Button>
+                              )}
+                              {path === "reivindicacoes" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Conferir reivindicação"
+                                  onClick={() =>
+                                    void run(() => conferClaim(Number(r["id_reivindicacao"])))
+                                  }
+                                >
+                                  <ShieldCheck />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Excluir registro"
+                                onClick={() => {
+                                  setRemove(r);
+                                  setError("");
+                                }}
+                              >
+                                <Trash2 className="text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!displayRows.length && (
+                    <p className="empty-state">Nenhum registro encontrado.</p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          {operations && (
+            <>
+              <h2 className="text-xl font-semibold mb-3">Operações do Protocolo</h2>
+              <div className="operation-row">
+                <div>
+                  <h3>Conexão com o FastAPI</h3>
+                  <p>
+                    {connection === "demo"
+                      ? "Offline · demonstração nesta sessão"
+                      : "Conectado ao servidor"}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      retryConnection();
+                      await refresh();
+                      return { mensagem: "Nova tentativa de conexão concluída." };
+                    })
+                  }
+                >
+                  <RefreshCw />
+                  Reconectar
+                </Button>
+              </div>
+              <div className="operation-row">
+                <div>
+                  <h3>Processar vencimentos</h3>
+                  <p>Encaminhar itens com prazo de guarda expirado para doação.</p>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setConfirmOperation("vencimentos")}
+                >
+                  <ClockIcon />
+                  Processar
+                </Button>
+              </div>
+              <div className="operation-row">
+                <div>
+                  <h3>Correspondência automática</h3>
+                  <p>Comparar categoria e cor de um achado com alertas de perda.</p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    aria-label="ID do objeto para correspondência"
+                    placeholder="ID do achado"
+                    min={1}
+                    value={matchId}
+                    onChange={(e) => setMatchId(e.target.value)}
+                    className="max-w-32 text-xs"
+                  />
+                  <Button
+                    disabled={!matchId || busy}
+                    onClick={() =>
+                      void run(() => operation(`/operacoes/executar-match/${matchId}`))
+                    }
+                  >
+                    <Play />
+                    Executar
+                  </Button>
+                </div>
+              </div>
+              <div className="operation-row">
+                <div>
+                  <h3>Inicializar banco</h3>
+                  <p>Criar a estrutura e os registros iniciais do sistema.</p>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setConfirmOperation("inicializar")}
+                >
+                  Inicializar
+                </Button>
+              </div>
+              <div className="operation-row">
+                <div>
+                  <h3 className="text-destructive">Limpar banco</h3>
+                  <p>Remover todos os registros. Esta ação não pode ser desfeita.</p>
+                </div>
+                <Button
+                  variant="destructive"
+                  disabled={busy}
+                  onClick={() => setConfirmOperation("limpar")}
+                >
+                  <Trash2 />
+                  Limpar
+                </Button>
+              </div>
+            </>
+          )}
+          {result !== null && (
+            <div className="mt-6">
+              <div className="flex justify-between mb-2">
+                <h3 className="text-sm">Resultado da consulta</h3>
+                <Button size="sm" variant="ghost" onClick={() => setResult(null)}>
+                  Fechar
+                </Button>
+              </div>
+              <pre className="api-result">{JSON.stringify(result, null, 2)}</pre>
+            </div>
+          )}
+        </section>
+      </div>
+      <Dialog
+        open={edit !== null}
+        onOpenChange={(o) => {
+          if (!o && !busy) setEdit(null);
+        }}
+      >
+        <DialogContent className="modal-content">
+          <DialogTitle>
+            {isNew ? "Novo registro" : "Editar registro"} · {resource?.label}
+          </DialogTitle>
+          <DialogDescription className="modal-subtitle">
+            {isNew
+              ? "Preencha os dados abaixo."
+              : "Altere os campos disponíveis para este registro."}
+          </DialogDescription>
+          {resource && edit && (
+            <form className="form-stack" onSubmit={(e) => void save(e)}>
+              {(isNew
+                ? resource.fields
+                : resource.fields.filter((f) => resource.editFields.includes(f.key))
+              ).map((f) => (
+                <Field key={f.key} label={`${fieldLabel(f.key)}${f.required && isNew ? " *" : ""}`}>
+                  <input
+                    name={f.key}
+                    type={f.type}
+                    defaultValue={String(edit[f.key] ?? "")}
+                    placeholder={
+                      !isNew && f.key === "detalhe_seguranca_oculto"
+                        ? "Deixe em branco para manter o segredo atual"
+                        : undefined
+                    }
+                    required={f.required && isNew}
+                    min={f.type === "number" ? 1 : undefined}
+                    onChange={(e) => {
+                      if (f.key === resource.idKey)
+                        setEdit({ ...edit, [f.key]: Number(e.target.value) });
+                    }}
+                  />
+                </Field>
+              ))}
+              <ErrorMessage message={error} />
+              <Button type="submit" disabled={busy}>
+                {busy ? "Salvando..." : "Salvar registro"}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={remove !== null}
+        onOpenChange={(o) => {
+          if (!o && !busy) setRemove(null);
+        }}
+      >
+        <DialogContent className="modal-content">
+          <DialogTitle>Excluir este registro?</DialogTitle>
+          <DialogDescription>
+            Esta ação é permanente. Registros vinculados podem impedir a exclusão.
+          </DialogDescription>
+          <ErrorMessage message={error} />
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setRemove(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" disabled={busy} onClick={() => void deleteRow()}>
+              Confirmar exclusão
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!confirmOperation}
+        onOpenChange={(o) => {
+          if (!o) setConfirmOperation("");
+        }}
+      >
+        <DialogContent className="modal-content">
+          <DialogTitle>Confirmar operação</DialogTitle>
+          <DialogDescription>
+            {confirmOperation === "limpar"
+              ? "Todos os dados serão removidos permanentemente."
+              : confirmOperation === "inicializar"
+                ? "A estrutura e os registros iniciais serão criados."
+                : "Os objetos vencidos serão encaminhados para doação."}
+            {connection === "demo" ? " A operação afeta somente a demonstração desta sessão." : ""}
+          </DialogDescription>
+          <Button
+            variant={confirmOperation === "limpar" ? "destructive" : "default"}
+            disabled={busy}
+            onClick={() =>
+              void run(() =>
+                confirmOperation === "limpar"
+                  ? clearDatabase()
+                  : operation(
+                      confirmOperation === "inicializar"
+                        ? "/banco/inicializar"
+                        : `/operacoes/processar-vencimentos?id_operador=${currentUser?.id ?? 2}`,
+                    ),
+              )
+            }
+          >
+            {busy ? "Processando..." : "Confirmar"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </main>
+  );
+}
+
+const ClockIcon = RefreshCw;
