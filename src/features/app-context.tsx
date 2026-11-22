@@ -63,10 +63,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setRole = useCallback((next: Role) => {
     setRoleState(next);
     window.localStorage.setItem("ufscachados-role", next);
-    if (next === "visitante") {
-      setCurrentUser(null);
-      window.localStorage.removeItem("ufscachados-user");
-    }
+    setCurrentUser(null);
+    window.localStorage.removeItem("ufscachados-user");
   }, []);
 
   const loginAs = useCallback((user: SessionUser | null) => {
