@@ -10,6 +10,7 @@ import {
   Bell,
   ArrowUpRight,
   ShieldCheck,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -17,15 +18,30 @@ import { logo } from "@/data/assets";
 import type { Role } from "@/data/types";
 import { useApp } from "./app-context";
 import { listResource } from "@/services/api";
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { role, setRole, connection } = useApp();
+  const { role, setRole, currentUser, connection } = useApp();
   const { pathname } = useLocation();
   const [menu, setMenu] = useState(false);
   const [notifications, setNotifications] = useState<string[] | null>(null);
+
   const changeRole = (r: Role) => {
     setRole(r);
     setMenu(false);
   };
+
+  const displayName =
+    currentUser?.name ?? (role === "operador" ? "Lucas Mendes" : "Ana Carolina");
+  const shortName = displayName.trim().split(/\s+/)[0] ?? displayName;
+  const initials = getInitials(displayName);
+  const activeUserId = currentUser?.id ?? (role === "operador" ? 2 : 1);
+
   return (
     <>
       <header className="top-header">
@@ -80,7 +96,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   const rows = await listResource("notificacoes");
                   setNotifications(
                     rows
-                      .filter((r) => r["id_usuario"] === (role === "operador" ? 2 : 1))
+                      .filter((r) => Number(r["id_usuario"]) === activeUserId)
                       .map((r) => String(r["mensagem"])),
                   );
                 }}
@@ -103,10 +119,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   </>
                 ) : (
                   <>
-                    <span className="avatar">{role === "operador" ? "LM" : "AC"}</span>
-                    <span className="profile-label text-xs">
-                      {role === "operador" ? "Lucas" : "Ana"}
-                    </span>
+                    <span className="avatar">{initials}</span>
+                    <span className="profile-label text-xs">{shortName}</span>
                   </>
                 )}
                 <ChevronDown className="chevron" />
@@ -114,11 +128,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {menu && (
                 <div className="profile-menu">
                   <div className="px-3 py-2 text-xs text-muted-foreground">
-                    {role === "operador"
-                      ? "Operador do Protocolo"
-                      : role === "usuario"
-                        ? "Comunidade UFSC"
-                        : "Acesso de visitante"}
+                    {role === "visitante" ? (
+                      "Acesso de visitante"
+                    ) : (
+                      <>
+                        <div className="font-semibold text-foreground">{displayName}</div>
+                        <div>
+                          {role === "operador"
+                            ? `Operador do Protocolo (ID ${activeUserId})`
+                            : `Comunidade UFSC (ID ${activeUserId})`}
+                        </div>
+                      </>
+                    )}
                   </div>
                   {role === "operador" && (
                     <>
@@ -138,10 +159,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
                       Login com idUFSC
                     </Link>
                   ) : (
-                    <Button variant="ghost" onClick={() => changeRole("visitante")}>
-                      <LogOut />
-                      Sair
-                    </Button>
+                    <>
+                      <Link to="/acesso" onClick={() => setMenu(false)}>
+                        <UserCheck size={16} />
+                        Trocar usuário
+                      </Link>
+                      <Button variant="ghost" onClick={() => changeRole("visitante")}>
+                        <LogOut />
+                        Sair
+                      </Button>
+                    </>
                   )}
                 </div>
               )}
