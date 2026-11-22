@@ -407,9 +407,9 @@ export async function clearDatabase() {
 
 export async function reports() {
   return Promise.all([
-    listReport("consulta-1-blocos"),
-    listReport("consulta-2-categorias-status"),
-    listReport("consulta-3-reivindicacoes"),
+    listReport("objetos-por-bloco"),
+    listReport("itens-por-categoria-status"),
+    listReport("reivindicacoes-por-status-categoria"),
   ]);
 }
 
@@ -417,14 +417,14 @@ async function listReport(path: string): Promise<RecordData[]> {
   return fallback(
     () => request<RecordData[]>(`/relatorios/${path}`),
     () => {
-      if (path === "consulta-1-blocos")
+      if (path === "objetos-por-bloco")
         return Object.entries(
           items.reduce<Record<string, number>>((a, i) => {
             a[i.location] = (a[i.location] ?? 0) + 1;
             return a;
           }, {}),
         ).map(([bloco_predio, total_objetos]) => ({ bloco_predio, total_objetos }));
-      if (path === "consulta-2-categorias-status")
+      if (path === "itens-por-categoria-status")
         return items.map((i) => ({
           categoria: i.category,
           status_objeto: i.status === 3 ? "Devolvido" : i.type === "achado" ? "Achado" : "Perdido",
