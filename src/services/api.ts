@@ -23,13 +23,15 @@ export class ApiError extends Error {}
 export async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
   if (connection === "demo") throw new TypeError("Modo demonstração");
   let response: Response;
+  const headers: Record<string, string> = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (import.meta.env["VITE_ADMIN_KEY"]) {
+    headers["X-Admin-Key"] = import.meta.env["VITE_ADMIN_KEY"];
+  }
   try {
     response = await fetch(`${API_URL}${path}`, {
       method,
-      headers: {
-      ...(body ? { "Content-Type": "application/json" } : {},
-      ...(import.meta.env["VITE_ADMIN_KEY"] ? { "X-Admin-Key": import.meta.env["VITE_ADMIN_KEY"] } : {}),
-    },
+      headers,
       ...(body ? { body: JSON.stringify(body) } : {}),
       signal: AbortSignal.timeout(60000),
     });
