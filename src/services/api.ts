@@ -26,9 +26,12 @@ export async function request<T>(path: string, method = "GET", body?: unknown): 
   try {
     response = await fetch(`${API_URL}${path}`, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : {},
+      headers: {
+      ...(body ? { "Content-Type": "application/json" } : {},
+      ...(import.meta.env["VITE_ADMIN_KEY"] ? { "X-Admin-Key": import.meta.env["VITE_ADMIN_KEY"] } : {}),
+    },
       ...(body ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(3500),
+      signal: AbortSignal.timeout(60000),
     });
   } catch (e) {
     setConnection("demo");
