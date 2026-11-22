@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, UploadCloud, Star, Plus, ShieldCheck, X, Camera } from "lucide-react";
+import { ArrowLeft, UploadCloud, Star, Plus, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/features/app-context";
 import { ErrorMessage, Field, metadata, Processing } from "@/features/common";
 import { canPublish, type Item, type RecordData } from "@/data/types";
 import { createItem, listResource, operation } from "@/services/api";
+
 export const Route = createFileRoute("/publicar")({
   head: () =>
     metadata(
@@ -15,8 +16,9 @@ export const Route = createFileRoute("/publicar")({
     ),
   component: Publish,
 });
+
 function Publish() {
-  const { role, items, refresh } = useApp();
+  const { role, currentUser, items, refresh } = useApp();
   const navigate = useNavigate();
   const [type, setType] = useState<"achado" | "perdido">("perdido");
   const [photo, setPhoto] = useState("");
@@ -26,6 +28,7 @@ function Publish() {
   const [categories, setCategories] = useState<RecordData[]>([]);
   const [locations, setLocations] = useState<RecordData[]>([]);
   const [colors, setColors] = useState<RecordData[]>([]);
+
   useEffect(() => {
     void Promise.all([listResource("categorias"), listResource("locais"), listResource("cores")])
       .then(([c, l, co]) => {
@@ -35,6 +38,7 @@ function Publish() {
       })
       .catch((e) => setError(String(e)));
   }, []);
+
   async function upload(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -59,6 +63,7 @@ function Publish() {
       setError("Não foi possível abrir esta imagem. Tente JPG ou PNG.");
     }
   }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!canPublish(role) || !consent) return;
@@ -77,6 +82,9 @@ function Publish() {
     const now = new Date();
     const expiry = new Date(now);
     expiry.setDate(expiry.getDate() + 90);
+
+    const activeUserId = currentUser?.id ?? (role === "operador" ? 2 : 1);
+
     const item: Item = {
       id: Math.max(99, ...items.map((i) => i.id)) + 1,
       title,
@@ -91,8 +99,9 @@ function Publish() {
       image: photo,
       type,
       status: type === "achado" ? 1 : 5,
-      userId: role === "operador" ? 2 : 1,
+      userId: activeUserId,
     };
+
     setBusy(true);
     setError("");
     try {
@@ -112,6 +121,7 @@ function Publish() {
       setBusy(false);
     }
   }
+
   if (!canPublish(role))
     return (
       <main className="page-width main-content">
@@ -125,6 +135,7 @@ function Publish() {
         </div>
       </main>
     );
+
   return (
     <main className="page-width main-content">
       <div className="max-w-2xl mx-auto">
