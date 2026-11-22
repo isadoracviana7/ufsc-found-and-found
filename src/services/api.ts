@@ -1,13 +1,16 @@
 import { demoItems, demoSecrets, demoTables } from "@/data/demo";
 import { images } from "@/data/assets";
 import { isPublic, normalize, type Item, type Match, type RecordData } from "@/data/types";
+
 export const API_URL = import.meta.env["VITE_API_URL"] || "http://127.0.0.1:8000";
 export type Connection = "conectando" | "online" | "demo";
+
 let connection: Connection = "conectando";
 let items = structuredClone(demoItems);
 let tables = structuredClone(demoTables);
 let secrets = { ...demoSecrets };
 const listeners = new Set<(c: Connection) => void>();
+
 export const subscribeConnection = (fn: (c: Connection) => void) => {
   listeners.add(fn);
   fn(connection);
@@ -15,19 +18,24 @@ export const subscribeConnection = (fn: (c: Connection) => void) => {
     listeners.delete(fn);
   };
 };
+
 function setConnection(c: Connection) {
   connection = c;
   listeners.forEach((fn) => fn(c));
 }
+
 export class ApiError extends Error {}
+
 export async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
   if (connection === "demo") throw new TypeError("Modo demonstração");
   let response: Response;
+
   const headers: Record<string, string> = {};
   if (body) headers["Content-Type"] = "application/json";
   if (import.meta.env["VITE_ADMIN_KEY"]) {
     headers["X-Admin-Key"] = import.meta.env["VITE_ADMIN_KEY"];
   }
+
   try {
     response = await fetch(`${API_URL}${path}`, {
       method,
@@ -36,9 +44,12 @@ export async function request<T>(path: string, method = "GET", body?: unknown): 
       signal: AbortSignal.timeout(60000),
     });
   } catch (e) {
-    setConnection("demo");
+    if (connection === "conectando") {
+      setConnection("demo");
+    }
     throw e;
   }
+
   setConnection("online");
   if (!response.ok) {
     const detail = await response.json().catch(() => ({ detail: response.statusText }));
@@ -49,17 +60,20 @@ export async function request<T>(path: string, method = "GET", body?: unknown): 
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
+
 async function fallback<T>(action: () => Promise<T>, local: () => T | Promise<T>): Promise<T> {
   try {
     return await action();
   } catch (e) {
-    if (e instanceof ApiError) throw e;
+    if (e instanceof ApiError || connection === "online") throw e;
     return local();
   }
 }
+
 export function retryConnection() {
   setConnection("conectando");
 }
+
 function imageFor(text: string) {
   const n = normalize(text);
   const key = n.includes("carteira")
@@ -87,6 +101,7 @@ function imageFor(text: string) {
                         : "carteirinha";
   return images[key] ?? "";
 }
+
 export function itemRecord(i: Item): RecordData {
   return {
     id_objeto: i.id,
@@ -101,6 +116,7 @@ export function itemRecord(i: Item): RecordData {
     id_tipo: i.type === "achado" ? 1 : 2,
   };
 }
+
 export async function listItems(): Promise<Item[]> {
   return fallback(
     async () => {
@@ -134,12 +150,14 @@ export async function listItems(): Promise<Item[]> {
     () => structuredClone(items),
   );
 }
+
 export async function listResource(path: string): Promise<RecordData[]> {
   return fallback(
     () => request<RecordData[]>(`/${path}`),
     () => structuredClone(path === "objetos" ? items.map(itemRecord) : (tables[path] ?? [])),
   );
 }
+
 export async function saveResource(
   path: string,
   body: RecordData,
@@ -178,6 +196,7 @@ export async function saveResource(
     },
   );
 }
+
 export async function deleteResource(path: string, id: number, idKey: string) {
   return fallback(
     () => request<unknown>(`/${path}/${id}`, "DELETE"),
@@ -188,16 +207,22 @@ export async function deleteResource(path: string, id: number, idKey: string) {
     },
   );
 }
+
 export async function createItem(item: Item, secret: string) {
   return fallback(
     async () => {
       await request("/objetos", "POST", { ...itemRecord(item), detalhe_seguranca_oculto: secret });
-      if (item.image.startsWith("data:"))
-        await request("/imagens", "POST", {
-          id_imagem: Date.now(),
-          id_objeto: item.id,
-          url_caminho: item.image,
-        });
+      if (item.image.startsWith("data:")) {
+        try {
+          await request("/imagens", "POST", {
+            id_imagem: Math.floor(100000 + Math.random() * 900000),
+            id_objeto: item.id,
+            url_caminho: item.image,
+          });
+        } catch {
+          // Ignora erro opcional de imagem para não invalidar o cadastro do objeto
+        }
+      }
       return item;
     },
     () => {
@@ -207,9 +232,10 @@ export async function createItem(item: Item, secret: string) {
     },
   );
 }
+
 export async function createClaim(itemId: number, userId: number, justification: string) {
   const body: RecordData = {
-    id_reivindicacao: Math.floor(Date.now() / 1000),
+    id_reivindicacao: Math.floor(100000 + Math.random() * 900000),
     id_objeto: itemId,
     id_usuario: userId,
     data_hora: new Date().toISOString(),
@@ -218,6 +244,7 @@ export async function createClaim(itemId: number, userId: number, justification:
   };
   return saveResource("reivindicacoes", body, "id_reivindicacao");
 }
+
 export async function conferClaim(id: number) {
   return fallback(
     () =>
@@ -246,6 +273,7 @@ export async function conferClaim(id: number) {
     },
   );
 }
+
 export async function getSecret(itemId: number): Promise<string> {
   const claims = await listResource("reivindicacoes");
   const claim = claims.find((r) => r["id_objeto"] === itemId);
@@ -255,6 +283,7 @@ export async function getSecret(itemId: number): Promise<string> {
   if (connection === "demo") return secrets[itemId] ?? "Não informado.";
   return "O backend disponibiliza o detalhe de segurança apenas na conferência de uma reivindicação. Selecione uma solicitação primeiro.";
 }
+
 export async function decideClaim(id: number, approved: boolean, observation: string) {
   return fallback(
     () =>
@@ -271,14 +300,14 @@ export async function decideClaim(id: number, approved: boolean, observation: st
       const item = items.find((i) => i.id === claim["id_objeto"]);
       if (item) item.status = approved ? 3 : 1;
       (tables["auditoria"] ??= []).push({
-        id_historico: Math.floor(Date.now() / 1000),
+        id_historico: Math.floor(100000 + Math.random() * 900000),
         id_objeto: Number(claim["id_objeto"]),
         id_usuario: 2,
         data_hora: new Date().toISOString(),
         tipo_transacao: approved ? "BAIXA_DEVOLUCAO" : "REIVINDICACAO_REJEITADA",
       });
       (tables["notificacoes"] ??= []).push({
-        id_notificacao: Math.floor(Date.now() / 1000),
+        id_notificacao: Math.floor(100000 + Math.random() * 900000),
         id_objeto: Number(claim["id_objeto"]),
         id_usuario: Number(claim["id_usuario"]),
         data_hora: new Date().toISOString(),
@@ -290,12 +319,13 @@ export async function decideClaim(id: number, approved: boolean, observation: st
     },
   );
 }
+
 export async function closeLost(item: Item, reason: string) {
   await saveResource("objetos", { id_objeto: item.id, id_status: 3 }, "id_objeto", true);
   await saveResource(
     "auditoria",
     {
-      id_historico: Math.floor(Date.now() / 1000),
+      id_historico: Math.floor(100000 + Math.random() * 900000),
       id_objeto: item.id,
       id_usuario: 2,
       data_hora: new Date().toISOString(),
@@ -304,6 +334,7 @@ export async function closeLost(item: Item, reason: string) {
     "id_historico",
   );
 }
+
 export async function semanticSearch(text: string): Promise<Match[]> {
   return fallback(
     () => request<Match[]>("/ia/buscar-objeto", "POST", { descricao_usuario: text }),
@@ -333,6 +364,7 @@ export async function semanticSearch(text: string): Promise<Match[]> {
     },
   );
 }
+
 export async function operation(path: string, body?: RecordData) {
   return fallback(
     () => request<unknown>(path, "POST", body),
@@ -361,6 +393,7 @@ export async function operation(path: string, body?: RecordData) {
     },
   );
 }
+
 export async function clearDatabase() {
   return fallback(
     () => request("/banco/limpar", "DELETE"),
@@ -371,6 +404,7 @@ export async function clearDatabase() {
     },
   );
 }
+
 export async function reports() {
   return Promise.all([
     listReport("consulta-1-blocos"),
@@ -378,6 +412,7 @@ export async function reports() {
     listReport("consulta-3-reivindicacoes"),
   ]);
 }
+
 async function listReport(path: string): Promise<RecordData[]> {
   return fallback(
     () => request<RecordData[]>(`/relatorios/${path}`),
