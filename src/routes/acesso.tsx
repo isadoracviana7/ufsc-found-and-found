@@ -29,7 +29,10 @@ function Access() {
     let active = true;
     setLoadingUsers(true);
 
-    Promise.all([listResource("usuarios"), listResource("operadores")])
+    Promise.all([
+      listResource("usuarios"),
+      listResource("usuarios/operador").catch(() => []),
+    ])
       .then(([rawUsers, rawOperators]) => {
         if (!active) return;
         const operatorIds = new Set(
@@ -39,7 +42,7 @@ function Access() {
         const mapped: SessionUser[] = rawUsers
           .map((u) => {
             const id = Number(u["id_usuario"]);
-            const name = String(u["nome"] ?? `Usuário #${id}`);
+            const name = String(u["name"] ?? u["nome"] ?? `Usuário #${id}`);
             const isOp = operatorIds.has(id);
             return {
               id,
