@@ -1,4 +1,3 @@
-import asset0 from "@/assets/logo.asset.json";
 import asset1 from "@/assets/garrafa.asset.json";
 import asset2 from "@/assets/carregador.asset.json";
 import asset3 from "@/assets/chaves.asset.json";
@@ -12,8 +11,9 @@ import asset10 from "@/assets/carteira.asset.json";
 import asset11 from "@/assets/guarda-chuva.asset.json";
 import asset12 from "@/assets/caderno.asset.json";
 import asset13 from "@/assets/moletom.asset.json";
+
 export const images: Record<string, string> = {
-  logo: asset0.url,
+  logo: "/logo_ufsc.png",
   garrafa: asset1.url,
   carregador: asset2.url,
   chaves: asset3.url,
@@ -28,4 +28,5 @@ export const images: Record<string, string> = {
   caderno: asset12.url,
   moletom: asset13.url,
 };
-export const logo = asset0.url;
+
+export const logo = "/logo_ufsc.png";
