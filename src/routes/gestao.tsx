@@ -452,6 +452,11 @@ function Admin() {
                     name={f.key}
                     type={f.type}
                     defaultValue={String(edit[f.key] ?? "")}
+                    placeholder={
+                      !isNew && f.key === "detalhe_seguranca_oculto"
+                        ? "Deixe em branco para manter o segredo atual"
+                        : undefined
+                    }
                     required={f.required && isNew}
                     min={f.type === "number" ? 1 : undefined}
                     onChange={(e) => {
