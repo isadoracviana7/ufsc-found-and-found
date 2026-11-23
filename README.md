@@ -1,57 +1,52 @@
-🎓 UFSCAchados — Sistema Inteligente de Achados e Perdidos
+# 🎓 UFSCAchados — Sistema Inteligente de Achados e Perdidos
 
-Um reencontro começa aqui. Plataforma web desenvolvida para facilitar o registro, a gestão e a recuperação de objetos perdidos e encontrados nos campi da Universidade Federal de Santa Catarina (UFSC — Campus Araranguá).
+> **Um reencontro começa aqui.** Plataforma web desenvolvida para facilitar o registro, a gestão e a recuperação de objetos perdidos e encontrados nos campi da **Universidade Federal de Santa Catarina (UFSC — Campus Araranguá)**.
 
-🔗 Acesse a aplicação online: ufsc-found-and-found.vercel.app
+🔗 **Acesse a aplicação online:** [ufsc-found-and-found.vercel.app](https://ufsc-found-and-found.vercel.app)
 
-⚙️ API em produção (Swagger Docs): ufscachados-api.onrender.com/docs
+⚙️ **API em produção (Swagger Docs):** [ufscachados-api.onrender.com/docs](https://ufscachados-api.onrender.com/docs)
 
-📋 Sobre o Projeto
+---
 
-O UFSCAchados resolve o problema da descentralização de informações sobre itens perdidos no ambiente universitário. O sistema oferece um mural público acessível a estudantes, servidores e visitantes, além de uma área restrita para operadores e administradores gerenciarem o ciclo de vida de cada objeto (registro, reivindicação e devolução).
+## 📋 Sobre o Projeto
 
-O grande diferencial da plataforma é a Busca Inteligente com Inteligência Artificial, que permite ao usuário descrever o objeto perdido em linguagem natural (ex: "esqueci uma garrafa térmica azul perto da biblioteca ontem") e encontrar correspondências semânticas no banco de dados.
+O **UFSCAchados** resolve o problema da descentralização de informações sobre itens perdidos no ambiente universitário. O sistema oferece um mural público acessível a estudantes, servidores e visitantes, além de uma área restrita para operadores e administradores gerenciarem o ciclo de vida de cada objeto (registro, reivindicação e devolução).
 
-✨ Funcionalidades Principais
+O grande diferencial da plataforma é a **Busca Inteligente com Inteligência Artificial**, que permite ao usuário descrever o objeto perdido em linguagem natural (ex: *"esqueci uma garrafa térmica azul perto da biblioteca ontem"*) e encontrar correspondências semânticas no banco de dados.
 
-Mural Público Interativo: Visualização de itens divididos entre Perdidos e Achados, com filtros por categoria, local/bloco do campus, data e ordenação.
+---
 
-Busca Inteligente com IA: Integração com a API do Google Gemini (gemini-3.5-flash) para interpretar descrições em linguagem natural e ranquear os objetos mais compatíveis.
+## ✨ Funcionalidades Principais
 
-Painel de Gestão (Operador/Admin):
+* **Mural Público Interativo:** Visualização de itens divididos entre *Perdidos* e *Achados*, com filtros por categoria, local/bloco do campus, data e ordenação.
+* **Busca Inteligente com IA:** Integração com a API do **Google Gemini** (`gemini-3.5-flash`) para interpretar descrições em linguagem natural e ranquear os objetos mais compatíveis.
+* **Painel de Gestão (Operador/Admin):**
+  * Cadastro de novos objetos com detalhes de localização e descrição.
+  * Atualização de status (ex: marcar item como *Devolvido* ou *Reivindicado*).
+  * Controle de acesso protegido por chave de autenticação.
+* **Resiliência (Modo Demonstração):** Caso a API esteja temporariamente indisponível ou em inicialização (*cold start*), o front-end alterna automaticamente para um modo de demonstração com dados locais para manter a navegabilidade.
 
-Cadastro de novos objetos com detalhes de localização e descrição.
+---
 
-Atualização de status (ex: marcar item como Devolvido ou Reivindicado).
+## 🛠️ Tecnologias Utilizadas
 
-Controle de acesso protegido por chave de autenticação.
+### Front-end (`/frontend`)
+* **React** + **TypeScript**
+* **Vite** (Build tool e servidor de desenvolvimento)
+* **Tailwind CSS** & **shadcn/ui** (Estilização e componentes de interface)
+* **Hospedagem:** Vercel
 
-Resiliência (Modo Demonstração): Caso a API esteja temporariamente indisponível ou em inicialização (cold start), o front-end alterna automaticamente para um modo de demonstração com dados locais para manter a navegabilidade.
+### Back-end (`/backend`)
+* **Python 3** + **FastAPI** (API RESTful assíncrona)
+* **Google GenAI SDK** (Integração com modelos Gemini para busca semântica)
+* **Pydantic** (Validação de dados e schemas)
+* **Hospedagem:** Render
 
-🛠️ Tecnologias Utilizadas
+---
 
-Front-end (/frontend)
+## 📁 Estrutura do Repositório
 
-React + TypeScript
-
-Vite (Build tool e servidor de desenvolvimento)
-
-Tailwind CSS & shadcn/ui (Estilização e componentes de interface)
-
-Hospedagem: Vercel
-
-Back-end (/backend)
-
-Python 3 + FastAPI (API RESTful assíncrona)
-
-Google GenAI SDK (Integração com modelos Gemini para busca semântica)
-
-Pydantic (Validação de dados e schemas)
-
-Hospedagem: Render
-
-📁 Estrutura do Repositório
-
+```text
 ufscachados/
 ├── backend/                  # API desenvolvida em FastAPI (Python)
 │   ├── main.py               # Rotas principais, configuração de CORS e integração IA
@@ -62,20 +57,20 @@ ufscachados/
 │   ├── package.json          # Dependências do Node.js
 │   └── ...
 └── README.md                 # Documentação do projeto
+```
 
+---
 
-🚀 Como Executar Localmente
+## 🚀 Como Executar Localmente
 
-Pré-requisitos
+### Pré-requisitos
+* **Node.js** (v18 ou superior)
+* **Python** (v3.10 ou superior)
+* Uma chave de API válida do **Google Gemini** (`GEMINI_API_KEY`)
 
-Node.js (v18 ou superior)
+### 1. Configurando o Back-end
 
-Python (v3.10 ou superior)
-
-Uma chave de API válida do Google Gemini (GEMINI_API_KEY)
-
-1. Configurando o Back-end
-
+```bash
 # Acesse a pasta do back-end
 cd backend
 
@@ -95,12 +90,13 @@ pip install -r requirements.txt
 
 # Inicie o servidor local
 uvicorn main:app --reload
+```
 
+O back-end estará disponível em `http://127.0.0.1:8000` e a documentação interativa em `http://127.0.0.1:8000/docs`.
 
-O back-end estará disponível em http://127.0.0.1:8000 e a documentação interativa em http://127.0.0.1:8000/docs.
+### 2. Configurando o Front-end
 
-2. Configurando o Front-end
-
+```bash
 # Em outro terminal, acesse a pasta do front-end
 cd frontend
 
@@ -113,10 +109,12 @@ npm install
 
 # Inicie o servidor de desenvolvimento
 npm run dev
+```
 
+O front-end estará acessível em `http://localhost:8080`.
 
-O front-end estará acessível em http://localhost:8080.
+---
 
-👩‍💻 Autoria
+## 👩‍💻 Autoria
 
-Desenvolvido por Isadora Viana (@isadoracviana7) e Gabrieli Jorge Barbosa (@gabi-barbosa) como projeto acadêmico — Universidade Federal de Santa Catarina (UFSC).
+Desenvolvido por **Isadora Viana** ([@isadoracviana7](https://github.com/isadoracviana7)) e **Gabrieli Jorge Barbosa** ([@gabi-barbosa](https://github.com/gabi-barbosa)) como projeto acadêmico — **Universidade Federal de Santa Catarina (UFSC)**.
