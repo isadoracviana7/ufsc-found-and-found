@@ -24,6 +24,19 @@ function setConnection(c: Connection) {
   listeners.forEach((fn) => fn(c));
 }
 
+function getLoggedUserIdParam(): string {
+  try {
+    const savedUser = window.localStorage.getItem("ufscachados-user");
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      if (parsed?.id) return `?id_usuario_logado=${parsed.id}`;
+    }
+  } catch {
+    // Ignora erro de leitura do localStorage
+  }
+  return "";
+}
+
 export class ApiError extends Error {}
 
 export async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
@@ -120,9 +133,10 @@ export function itemRecord(i: Item): RecordData {
 export async function listItems(): Promise<Item[]> {
   return fallback(
     async () => {
+      const userIdParam = getLoggedUserIdParam();
       const [publicRows, raw] = await Promise.all([
         request<Record<string, unknown>[]>("/operacoes/vitrine?apenas_disponiveis=false"),
-        request<RecordData[]>("/objetos"),
+        request<RecordData[]>(`/objetos${userIdParam}`),
       ]);
       return publicRows.map((r) => {
         const o = raw.find((x) => x["id_objeto"] === r["id_objeto"]);
@@ -152,8 +166,9 @@ export async function listItems(): Promise<Item[]> {
 }
 
 export async function listResource(path: string): Promise<RecordData[]> {
+  const query = path === "objetos" ? getLoggedUserIdParam() : "";
   return fallback(
-    () => request<RecordData[]>(`/${path}`),
+    () => request<RecordData[]>(`/${path}${query}`),
     () => structuredClone(path === "objetos" ? items.map(itemRecord) : (tables[path] ?? [])),
   );
 }
@@ -276,13 +291,25 @@ export async function conferClaim(id: number, operatorId = 2) {
 }
 
 export async function getSecret(itemId: number, operatorId = 2): Promise<string> {
+  if (connection === "demo") return secrets[itemId] ?? "Não informado.";
+
+  try {
+    const obj = await request<RecordData>(`/objetos/${itemId}?id_usuario_logado=${operatorId}`);
+    if (obj && typeof obj["detalhe_seguranca_oculto"] === "string" && obj["detalhe_seguranca_oculto"].trim() !== "") {
+      return obj["detalhe_seguranca_oculto"];
+    }
+  } catch {
+    // Caso a rota direta falhe, tenta via reivindicação abaixo
+  }
+
   const claims = await listResource("reivindicacoes");
   const claim = claims.find((r) => r["id_objeto"] === itemId);
-  if (claim)
+  if (claim) {
     return (await conferClaim(Number(claim["id_reivindicacao"]), operatorId)).comparacao_seguranca
       .segredo_real_cadastrado;
-  if (connection === "demo") return secrets[itemId] ?? "Não informado.";
-  return "O backend disponibiliza o detalhe de segurança apenas na conferência de uma reivindicação. Selecione uma solicitação primeiro.";
+  }
+
+  return "Sem detalhe de segurança cadastrado para este item.";
 }
 
 export async function decideClaim(
