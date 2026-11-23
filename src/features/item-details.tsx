@@ -44,7 +44,7 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
 
   useEffect(() => {
     if (role === "operador") {
-      void getSecret(item.id)
+      void getSecret(item.id, currentUser?.id ?? 2)
         .then(setSecret)
         .catch((e) => setError(String(e)));
       void listResource("reivindicacoes")
@@ -57,7 +57,7 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
         })
         .catch((e) => setError(String(e)));
     }
-  }, [role, item.id]);
+  }, [role, item.id, currentUser?.id]);
 
   async function validateRegistration() {
     setError("");
@@ -98,7 +98,8 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
     setError("");
     setBusy(true);
     try {
-      if (step === "found") await closeLost(item, reason);
+      const activeOperatorId = currentUser?.id ?? 2;
+      if (step === "found") await closeLost(item, reason, activeOperatorId);
       else {
         let id = Number(claimId);
         if (!id) {
@@ -113,6 +114,7 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
           id,
           approved,
           `Conferência presencial por ${operatorName}. Dono: ${name}. Matrícula: ${registration}. ${justification}`,
+          activeOperatorId,
         );
       }
       await refresh();
@@ -295,7 +297,10 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
                     value={claimId}
                     onChange={async (e) => {
                       setClaimId(e.target.value);
-                      const c = await conferClaim(Number(e.target.value));
+                      const c = await conferClaim(
+                        Number(e.target.value),
+                        currentUser?.id ?? 2,
+                      );
                       setSecret(c.comparacao_seguranca.segredo_real_cadastrado);
                       setComparison(c.comparacao_seguranca.justificativa_informada_pelo_usuario);
                     }}
