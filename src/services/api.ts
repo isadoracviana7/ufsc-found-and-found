@@ -245,7 +245,7 @@ export async function createClaim(itemId: number, userId: number, justification:
   return saveResource("reivindicacoes", body, "id_reivindicacao");
 }
 
-export async function conferClaim(id: number) {
+export async function conferClaim(id: number, operatorId = 2) {
   return fallback(
     () =>
       request<{
@@ -254,7 +254,7 @@ export async function conferClaim(id: number) {
           justificativa_informada_pelo_usuario: string;
         };
         solicitante: { nome: string };
-      }>(`/operacoes/conferir-reivindicacao/${id}?id_operador=2`),
+      }>(`/operacoes/conferir-reivindicacao/${id}?id_operador=${operatorId}`),
     () => {
       const row = tables["reivindicacoes"]?.find((r) => r["id_reivindicacao"] === id);
       if (!row) throw new ApiError("Reivindicação não encontrada.");
@@ -265,7 +265,8 @@ export async function conferClaim(id: number) {
         },
         solicitante: {
           nome: String(
-            tables["usuarios"]?.find((r) => r["id_usuario"] === row["id_usuario"])?.["nome"] ??
+            tables["usuarios"]?.find((r) => r["id_usuario"] === row["id_usuario"])?.["name"] ??
+              tables["usuarios"]?.find((r) => r["id_usuario"] === row["id_usuario"])?.["nome"] ??
               "Solicitante",
           ),
         },
@@ -274,22 +275,27 @@ export async function conferClaim(id: number) {
   );
 }
 
-export async function getSecret(itemId: number): Promise<string> {
+export async function getSecret(itemId: number, operatorId = 2): Promise<string> {
   const claims = await listResource("reivindicacoes");
   const claim = claims.find((r) => r["id_objeto"] === itemId);
   if (claim)
-    return (await conferClaim(Number(claim["id_reivindicacao"]))).comparacao_seguranca
+    return (await conferClaim(Number(claim["id_reivindicacao"]), operatorId)).comparacao_seguranca
       .segredo_real_cadastrado;
   if (connection === "demo") return secrets[itemId] ?? "Não informado.";
   return "O backend disponibiliza o detalhe de segurança apenas na conferência de uma reivindicação. Selecione uma solicitação primeiro.";
 }
 
-export async function decideClaim(id: number, approved: boolean, observation: string) {
+export async function decideClaim(
+  id: number,
+  approved: boolean,
+  observation: string,
+  operatorId = 2,
+) {
   return fallback(
     () =>
       request("/operacoes/avaliar-reivindicacao", "POST", {
         id_reivindicacao: id,
-        id_operador: 2,
+        id_operador: operatorId,
         aprovada: approved,
         observacao_operador: observation,
       }),
@@ -302,7 +308,7 @@ export async function decideClaim(id: number, approved: boolean, observation: st
       (tables["auditoria"] ??= []).push({
         id_historico: Math.floor(100000 + Math.random() * 900000),
         id_objeto: Number(claim["id_objeto"]),
-        id_usuario: 2,
+        id_usuario: operatorId,
         data_hora: new Date().toISOString(),
         tipo_transacao: approved ? "BAIXA_DEVOLUCAO" : "REIVINDICACAO_REJEITADA",
       });
@@ -320,14 +326,14 @@ export async function decideClaim(id: number, approved: boolean, observation: st
   );
 }
 
-export async function closeLost(item: Item, reason: string) {
+export async function closeLost(item: Item, reason: string, operatorId = 2) {
   await saveResource("objetos", { id_objeto: item.id, id_status: 3 }, "id_objeto", true);
   await saveResource(
     "auditoria",
     {
       id_historico: Math.floor(100000 + Math.random() * 900000),
       id_objeto: item.id,
-      id_usuario: 2,
+      id_usuario: operatorId,
       data_hora: new Date().toISOString(),
       tipo_transacao: reason === "plataforma" ? "ENCONTRADO_PLATAFORMA" : "ENCONTRADO_EXTERNO",
     },
