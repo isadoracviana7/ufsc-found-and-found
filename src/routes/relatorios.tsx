@@ -62,6 +62,28 @@ function Reports() {
   const [raw, setRaw] = useState<RecordData[][]>([]);
   const [claims, setClaims] = useState<RecordData[]>([]);
   const [error, setError] = useState("");
+  const [apiChart, setApiChart] = useState<{ title: string; url: string } | null>(null);
+  const [loadingChart, setLoadingChart] = useState(false);
+
+  async function openApiChart(slug: string, title: string) {
+    setLoadingChart(true);
+    setError("");
+    try {
+      const baseUrl = (API_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+      const res = await fetch(`${baseUrl}/relatorios/${slug}/grafico`, {
+        headers: { "ngrok-skip-browser-warning": "true" },
+      });
+      if (!res.ok) throw new Error(`Erro ${res.status} ao carregar gráfico da API.`);
+      const blob = await res.blob();
+      if (apiChart?.url) URL.revokeObjectURL(apiChart.url);
+      setApiChart({ title, url: URL.createObjectURL(blob) });
+    } catch (e) {
+      setError(`Não foi possível carregar o gráfico: ${String(e)}`);
+    } finally {
+      setLoadingChart(false);
+    }
+  }
+
   useEffect(() => {
     if (role !== "operador") return;
     void Promise.all([reports(), listResource("reivindicacoes")])
@@ -371,28 +393,58 @@ function Reports() {
           </div>
         </section>
       </div>
-      {connection === "online" && (
-        <section className="mt-10 border-t border-border pt-7">
-          <h2 className="text-sm font-semibold mb-4">
-            Gráficos originais da API · todos os períodos
-          </h2>
-          <div className="flex gap-3 flex-wrap">
-            {["consulta-1-blocos", "consulta-2-categorias-status", "consulta-3-reivindicacoes"].map(
-              (p, i) => (
-                <Button variant="outline" asChild key={p}>
-                  <a href={`${API_URL}/relatorios/${p}/grafico`} target="_blank" rel="noreferrer">
-                    {["Por bloco", "Categoria × status", "Reivindicações"][i]}
-                    <ArrowUpRight />
-                  </a>
-                </Button>
-              ),
-            )}
-          </div>
-          <p className="modal-subtitle mt-3">
-            Os gráficos originais não recebem filtros de data do servidor.
-          </p>
-        </section>
-      )}
-    </main>
+        {connection === "online" && (
+     <section className="mt-10 border-t border-border pt-7">
+       <h2 className="text-sm font-semibold mb-4">
+         Gráficos originais da API · todos os períodos
+       </h2>
+       <div className="flex gap-3 flex-wrap">
+         {[
+           { slug: "consulta-1-blocos", label: "Por bloco" },
+           { slug: "consulta-2-categorias-status", label: "Categoria × status" },
+           { slug: "consulta-3-reivindicacoes", label: "Reivindicações" },
+         ].map(({ slug, label }) => (
+           <Button
+             key={slug}
+             variant="outline"
+             disabled={loadingChart}
+             onClick={() => void openApiChart(slug, label)}
+           >
+             {label}
+             <ArrowUpRight />
+           </Button>
+         ))}
+       </div>
+       <p className="modal-subtitle mt-3">
+         Os gráficos originais não recebem filtros de data do servidor.
+       </p>
+
+       {apiChart && (
+         <div className="mt-6 rounded-xl border border-border bg-card p-4">
+           <div className="flex items-center justify-between mb-3">
+             <span className="text-sm font-semibold">
+               Gráfico original (Matplotlib): {apiChart.title}
+             </span>
+             <div className="flex gap-2">
+               <Button variant="outline" size="sm" asChild>
+                 <a href={apiChart.url} download={`grafico-${apiChart.title}.png`}>
+                   <Download size={14} /> Baixar PNG
+                 </a>
+               </Button>
+               <Button variant="ghost" size="sm" onClick={() => setApiChart(null)}>
+                 Fechar
+               </Button>
+             </div>
+           </div>
+           <img
+             src={apiChart.url}
+             alt={apiChart.title}
+             className="w-full max-w-3xl rounded-lg border border-border bg-white mx-auto"
+           />
+         </div>
+       )}
+     </section>
+    )}
+  </main>
   );
 }
