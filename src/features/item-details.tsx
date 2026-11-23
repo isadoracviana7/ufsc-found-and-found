@@ -44,9 +44,11 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
 
   useEffect(() => {
     if (role === "operador") {
-      void getSecret(item.id, currentUser?.id ?? 2)
-        .then(setSecret)
+      const activeOperatorId = currentUser?.id ?? 2;
+      void getSecret(item.id, activeOperatorId)
+        .then((val) => setSecret(val))
         .catch((e) => setError(String(e)));
+
       void listResource("reivindicacoes")
         .then((rows) => {
           const matching = rows.filter(
@@ -56,6 +58,9 @@ export function ItemDetails({ item, onClose }: { item: Item; onClose: () => void
           if (matching[0]) setClaimId(String(matching[0]["id_reivindicacao"]));
         })
         .catch((e) => setError(String(e)));
+    } else {
+      // Garante que o estado fique limpo caso não seja operador
+      setSecret("");
     }
   }, [role, item.id, currentUser?.id]);
 
