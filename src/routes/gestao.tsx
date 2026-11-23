@@ -297,7 +297,7 @@ function Admin() {
                                   size="icon"
                                   title="Conferir reivindicação"
                                   onClick={() =>
-                                    void run(() => conferClaim(Number(r["id_reivindicacao"]), currentUser?.id ?? 2)
+                                    void run(() => conferClaim(Number(r["id_reivindicacao"]), currentUser?.id ?? 2))
                                   }
                                 >
                                   <ShieldCheck />
